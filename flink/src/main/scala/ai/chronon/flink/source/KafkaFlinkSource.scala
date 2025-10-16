@@ -42,7 +42,7 @@ class KafkaFlinkSource[T](props: Map[String, String],
           OffsetsInitializer.timestamp(timestamp)
         } catch {
           case _: NumberFormatException =>
-            throw new IllegalArgumentException(s"Invalid timestamp format for start_offset: '$timestampStr'. Expected a valid long value in millisecond.")
+            throw new IllegalArgumentException(s"Invalid timestamp format for start_offset: '$timestampStr'. Expected a valid long value in milliseconds.")
         }
       case None =>
         OffsetsInitializer.committedOffsets(OffsetResetStrategy.LATEST)
