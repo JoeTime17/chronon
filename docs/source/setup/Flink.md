@@ -19,6 +19,31 @@ you will find both options.
 
 You will also likely need to modify your `KVStore` implementation while integrating Flink.
 
+### Configuration Properties
+
+When running Flink jobs, you can configure various properties. These properties control the behavior of Flink execution.
+
+**`kv_concurrency`**
+- **Type**: Integer
+- **Required**: No
+- **Default**: Default AsyncKVStoreWriter concurrency
+- **Description**: Controls the concurrency level for KV store writes, affecting throughput and resource usage.
+
+**`trigger`**
+- **Type**: String
+- **Required**: No
+- **Default**: `always_fire`
+- **Valid values**: `always_fire`, `buffered`
+- **Description**: Controls when the Flink window triggers output:
+  - `always_fire`: Triggers on every incoming event (lower latency, higher write volume)
+  - `buffered`: Batches writes for efficiency (higher latency, reduced write volume)
+
+**`start_offset`**
+- **Type**: Long (timestamp in milliseconds)
+- **Required**: No
+- **Default**: Uses committed offsets with LATEST strategy
+- **Description**: Specifies the timestamp from which to start consuming Kafka messages. Useful for catching up with historical data or reprocessing events from a specific point in time.
+
 ## Overview of the Flink operators
 
 The operators for the tiled and untiled Flink jobs differ slightly. The main difference is that the tiled job is
