@@ -35,13 +35,26 @@ class KafkaFlinkSource[T](props: Map[String, String],
     // confirm the topic exists
     TopicChecker.topicShouldExist(topicInfo.name, bootstrap, topicInfo.params)
 
+    val startingOffsets = FlinkUtils.getProperty("start_offset", props, topicInfo) match {
+      case Some(timestampStr) =>
+        try {
+          val timestamp = timestampStr.toLong
+          OffsetsInitializer.timestamp(timestamp)
+        } catch {
+          case _: NumberFormatException =>
+            throw new IllegalArgumentException(s"Invalid timestamp format for start_offset: '$timestampStr'. Expected a valid long value in millisecond.")
+        }
+      case None =>
+        OffsetsInitializer.committedOffsets(OffsetResetStrategy.LATEST)
+    }
+
     val kafkaSource = KafkaSource
       .builder[T]()
       .setTopics(topicInfo.name)
       .setGroupId(s"chronon-$groupByName")
       // we might have a fairly large backlog to catch up on, so we choose to go with the latest offset when we're
       // starting afresh
-      .setStartingOffsets(OffsetsInitializer.committedOffsets(OffsetResetStrategy.LATEST))
+      .setStartingOffsets(startingOffsets)
       .setValueOnlyDeserializer(deserializationSchema)
       .setBootstrapServers(bootstrap)
       .setProperties(TopicChecker.mapToJavaProperties(topicInfo.params))
