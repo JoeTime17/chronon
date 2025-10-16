@@ -52,8 +52,7 @@ class KafkaFlinkSource[T](props: Map[String, String],
       .builder[T]()
       .setTopics(topicInfo.name)
       .setGroupId(s"chronon-$groupByName")
-      // we might have a fairly large backlog to catch up on, so we choose to go with the latest offset when we're
-      // starting afresh
+      // starting offsets are configurable via start_offset (timestamp) or default to latest when starting afresh
       .setStartingOffsets(startingOffsets)
       .setValueOnlyDeserializer(deserializationSchema)
       .setBootstrapServers(bootstrap)
