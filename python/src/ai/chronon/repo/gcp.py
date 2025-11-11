@@ -499,7 +499,13 @@ class GcpRunner(Runner):
                     log[log.index(dataproc_submitter_id_str) + len(dataproc_submitter_id_str) + 1 :]
                 ).strip()
 
-            if not self.disable_cloud_logging and submitted_job_id:
+            # Check if this is a streaming deploy job
+            is_streaming_deploy = (
+                self.mode in ["streaming", "streaming-client"] and "deploy" in self._args.get("args")
+            )
+
+            # For non-streaming jobs or streaming jobs that aren't deploy, wait for completion
+            if not self.disable_cloud_logging and submitted_job_id and not is_streaming_deploy:
                 LOG.info(
                     """
                 <-----------------------------------------------------------------------------------
@@ -529,13 +535,14 @@ class GcpRunner(Runner):
                     LOG.info(f"Job {submitted_job_id} is in DONE state.")
                 return
 
-            # If streaming deploy job, poll and check for final
-            if (
-                submitted_job_id
-                and self.mode in ["streaming", "streaming-client"]
-                and "deploy" in self._args.get("args")
-            ):
-                # Poll the dataproc job id for 5 minutes until the job
+            # If streaming deploy job, poll and check for initial success instead of waiting for completion
+            if submitted_job_id and is_streaming_deploy:
+                LOG.info(f"Streaming deploy job {submitted_job_id} submitted successfully.")
+                LOG.info(
+                    f"Monitor job status at: https://console.cloud.google.com/dataproc/jobs/{submitted_job_id}"
+                    f"/monitoring?region={GcpRunner.get_gcp_region_id()}&project={GcpRunner.get_gcp_project_id()}"
+                )
+                # Poll the dataproc job id for 5 minutes to verify deployment
                 total_time_seconds = 5 * 60
                 interval_seconds = 10
                 start_time = time.time()
