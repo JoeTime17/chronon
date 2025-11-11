@@ -257,10 +257,11 @@ object AvroConversions {
       },
       {
         case avString: Utf8 => avString.toString
-        case str: String => str
-        case other => throw new IllegalArgumentException(
-          s"Unexpected string type: ${other.getClass.getName}. Expected String or Utf8, got: $other"
-        )
+        case str: String    => str
+        case other =>
+          throw new IllegalArgumentException(
+            s"Unexpected string type: ${other.getClass.getName}. Expected String or Utf8, got: $other"
+          )
       }
     )
   }
