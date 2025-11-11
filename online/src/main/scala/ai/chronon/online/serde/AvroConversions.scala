@@ -180,7 +180,7 @@ object AvroConversions {
   }
 
   private def toChrononRowCached(dataType: DataType): Any => Any = {
-    Row.fromCached[GenericRecord, ByteBuffer, Any, Utf8](
+    Row.fromCached[GenericRecord, ByteBuffer, Any, Any](
       dataType,
       { (record: GenericRecord, recordLength: Int) =>
         new AbstractIterator[Any]() {
@@ -255,7 +255,13 @@ object AvroConversions {
         case valueOfUnknownType =>
           throw new RuntimeException(s"Found unknown list type in avro record: ${valueOfUnknownType.getClass.getName}")
       },
-      { (avString: Utf8) => avString.toString }
+      {
+        case avString: Utf8 => avString.toString
+        case str: String => str
+        case other => throw new IllegalArgumentException(
+          s"Unexpected string type: ${other.getClass.getName}. Expected String or Utf8, got: $other"
+        )
+      }
     )
   }
 
