@@ -185,7 +185,7 @@ class SawtoothAggregator(aggregations: Seq[Aggregation], inputSchema: Seq[(Strin
 
     while (queryIdx < sortedEndTimes.length) {
 
-      while (inputIdx < sortedInputs.length && sortedInputs(inputIdx).ts < sortedEndTimes(queryIdx).ts) {
+      while (inputIdx < sortedInputs.length && sortedInputs(inputIdx).ts <= sortedEndTimes(queryIdx).ts) {
         queryIr = windowedAggregator.update(queryIr, sortedInputs(inputIdx))
         inputIdx += 1
       }
@@ -219,7 +219,7 @@ class SawtoothAggregator(aggregations: Seq[Aggregation], inputSchema: Seq[(Strin
     }
 
     sortedEndTimes.indices.iterator.map { queryIdx =>
-      while (inputIdx < sortedInputs.length && sortedInputs(inputIdx).ts < sortedEndTimes(queryIdx).ts) {
+      while (inputIdx < sortedInputs.length && sortedInputs(inputIdx).ts <= sortedEndTimes(queryIdx).ts) {
         queryIr = windowedAggregator.update(queryIr, sortedInputs(inputIdx))
         inputIdx += 1
       }

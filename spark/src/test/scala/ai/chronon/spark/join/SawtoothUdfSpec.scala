@@ -252,4 +252,88 @@ class SawtoothUdfSpec extends BaseJoinTest with Matchers {
       (avgPrice.isInstanceOf[Double] && (avgPrice.asInstanceOf[Double].isNaN || avgPrice
         .asInstanceOf[Double] == 0.0))) shouldBe true
   }
+
+  it should "include events with the same timestamp as the query (temporal window right boundary)" in {
+    // This test validates the fix for the temporal window boundary bug
+    // When a left query and right event have the exact same timestamp,
+    // the event should be INCLUDED in the aggregation window [T-window, T]
+
+    val baseTs = 1600000000000L
+
+    // Create left rows - a query at baseTs
+    val leftRows = Array(SparkRow(1, "query1", baseTs))
+
+    // Create right rows - an event at EXACTLY the same timestamp
+    val rightRows = Array(
+      SparkRow(1, "item1", 100.0, baseTs)  // Same timestamp as query
+    )
+
+    // Define schemas
+    val leftSchema = org.apache.spark.sql.types.StructType(Seq(
+      org.apache.spark.sql.types.StructField("user_id", org.apache.spark.sql.types.IntegerType),
+      org.apache.spark.sql.types.StructField("query", org.apache.spark.sql.types.StringType),
+      org.apache.spark.sql.types.StructField(Constants.TimeColumn, org.apache.spark.sql.types.LongType)
+    ))
+
+    val rightSchema = org.apache.spark.sql.types.StructType(Seq(
+      org.apache.spark.sql.types.StructField("user_id", org.apache.spark.sql.types.IntegerType),
+      org.apache.spark.sql.types.StructField("item_id", org.apache.spark.sql.types.StringType),
+      org.apache.spark.sql.types.StructField("price", org.apache.spark.sql.types.DoubleType),
+      org.apache.spark.sql.types.StructField(Constants.TimeColumn, org.apache.spark.sql.types.LongType)
+    ))
+
+    // Define aggregations
+    val aggregations = Seq(
+      Builders.Aggregation(
+        operation = Operation.COUNT,
+        inputColumn = "price",
+        windows = Seq(new Window(1, TimeUnit.DAYS))
+      ),
+      Builders.Aggregation(
+        operation = Operation.SUM,
+        inputColumn = "price",
+        windows = Seq(new Window(1, TimeUnit.DAYS))
+      )
+    )
+
+    // Create GroupBy definition
+    val groupBy = Builders.GroupBy(
+      sources = Seq(),
+      keyColumns = Seq("user_id"),
+      aggregations = aggregations,
+      metaData = null,
+      accuracy = null
+    )
+
+    // Create the aggregators
+    val minQueryTs = baseTs - 24 * 3600 * 1000
+    val aggregators = AggregationInfo.from(
+      groupBy = groupBy,
+      minQueryTs = minQueryTs,
+      leftSchema = leftSchema,
+      rightSchema = rightSchema,
+      resolution = FiveMinuteResolution
+    )
+
+    // Call the sawtoothAggregate function
+    val result = SawtoothUdf.sawtoothAggregate(aggregators)(leftRows, rightRows).toArray
+
+    // Verify the results
+    result.size shouldBe 1
+
+    val queryResult = result(0)
+    queryResult.isInstanceOf[CGenericRow] shouldBe true
+
+    // Verify query fields
+    queryResult.get(0) shouldBe 1
+    queryResult.get(1) shouldBe "query1"
+    queryResult.get(2) shouldBe baseTs
+
+    // CRITICAL: The event at the same timestamp should be INCLUDED
+    // count should be 1 (not 0 or null)
+    queryResult.get(3).asInstanceOf[Long] shouldBe 1L
+
+    // sum should be 100.0 (not 0 or null)
+    queryResult.get(4).asInstanceOf[Double] shouldBe 100.0 +- 0.001
+  }
 }

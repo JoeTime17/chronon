@@ -212,7 +212,7 @@ The following explain the backfill accuracy for each possible combination of lef
 
 ### Left side events, right side streaming events
 
-In this case you will get point-in-time correct feature backfills in your join table, meaning that every feature for this GroupBy will be accurate as of the millisecond that is provided on the left side `time_column`. For example, if a row on the left side has a timestamp of `2023-12-20 12:01:01.923` and an aggregation in the `GroupBy` has a `10 day` window, then only raw events between `2023-12-10 12:01:01.923` and `2023-12-20 12:01:01.922` will be included in the aggregation value.
+In this case you will get point-in-time correct feature backfills in your join table, meaning that every feature for this GroupBy will be accurate as of the millisecond that is provided on the left side `time_column`. For example, if a row on the left side has a timestamp of `2023-12-20 12:01:01.923` and an aggregation in the `GroupBy` has a `10 day` window, then only raw events between `2023-12-10 12:01:01.923` and `2023-12-20 12:01:01.923` will be included in the aggregation value.
 
 This is because these are the values that would have been observed online for that feature at that particular left side timestamp (values are updated in realtime).
 
