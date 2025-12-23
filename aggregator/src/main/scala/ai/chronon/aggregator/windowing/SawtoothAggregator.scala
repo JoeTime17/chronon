@@ -127,9 +127,10 @@ class SawtoothAggregator(aggregations: Seq[Aggregation], inputSchema: Seq[(Strin
       val row = inputs.next()
       val inputTs = row.ts
       var updateIndex = util.Arrays.binarySearch(sortedEndTimes, inputTs)
-      if (updateIndex >= 0) { // we found an exact match so we need to search further to get updateIndex
-        while (updateIndex < sortedEndTimes.length && sortedEndTimes(updateIndex) == inputTs)
-          updateIndex += 1
+      if (updateIndex >= 0) { // we found an exact match - include event at queryTs in the window
+        // Find the FIRST occurrence of this timestamp to ensure temporal window includes boundary
+        while (updateIndex > 0 && sortedEndTimes(updateIndex - 1) == inputTs)
+          updateIndex -= 1
       } else {
         // binary search didn't find an exact match
         updateIndex = math.abs(updateIndex) - 1
